@@ -9,4 +9,6 @@
 				 (brace-list-intro . 0)
 				 (innamespace . 0)
 				 (statement-cont . ++)
-				 (inline-open . 0))))))
+				 (inline-open . 0)))))
+ (nil . ((projectile-tags-command . "ctags-universal -eR src; ctags-universal -aeR include; ctags-universal -aeR build/_deps/sdl-src/include/; ctags-universal -aeR build/_deps/sdl-src/src/")))
+ )

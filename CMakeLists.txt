@@ -19,8 +19,8 @@ message(STATUS "Using SDL3 via FetchContent")
 FetchContent_MakeAvailable(SDL)
 set_property(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/_deps/sdl-src" PROPERTY EXCLUDE_FROM_ALL TRUE)
 
-add_executable(vostok src/main.cxx)
-
+add_executable(vostok src/main.cxx src/application.cxx)
+target_include_directories(vostok PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(vostok PRIVATE SDL3::SDL3)
 
 # EOF
