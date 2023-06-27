@@ -3,7 +3,11 @@
 #include <iostream>
 #include <stdexcept>
 
-#include <vulkan/vulkan.h>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/log/trivial.hpp>
+
+#include <SDL2/SDL_vulkan.h>
+
 #include <vulkan/vulkan_core.h>
 
 
@@ -19,7 +23,10 @@ application::application()
 
 application::~application()
 {
-    shutdown_sdl();
+    vkDestroyInstance(_vk_instance, nullptr);
+
+    SDL_DestroyWindow(_window);
+    SDL_Quit();
 }
 
 
@@ -39,10 +46,6 @@ void application::run()
         if (finished) {
             break;
         }
-
-        SDL_SetRenderDrawColor(_renderer, 80, 80, 80, SDL_ALPHA_OPAQUE);
-        SDL_RenderClear(_renderer);
-        SDL_RenderPresent(_renderer);
     }
 }
 
@@ -54,35 +57,73 @@ void application::init_sdl()
         throw std::runtime_error("SDL initialization failed");
     }
 
-    if (SDL_CreateWindowAndRenderer(640, 480, 0, &_window, &_renderer) < 0) {
-        SDL_Log("SDL_CreateWindowAndRenderer failed (%s)", SDL_GetError());
+    _window = SDL_CreateWindow(
+            "Vostok",
+            SDL_WINDOWPOS_UNDEFINED,
+            SDL_WINDOWPOS_UNDEFINED,
+            960,
+            540,
+            SDL_WINDOW_VULKAN);
+    if (!_window) {
+        SDL_Log("SDL_CreateWindow failed (%s)", SDL_GetError());
         SDL_Quit();
         throw std::runtime_error("SDL initialization failed");
     }
-    SDL_SetWindowTitle(_window, "SDL issue");
 }
 
 
 void application::init_vulkan()
 {
+    _vk_instance = create_vulkan_instance();
 
-    std::uint32_t n_ext = 0;
-    auto result = vkEnumerateInstanceExtensionProperties(nullptr, &n_ext, nullptr);
-    if (result == VK_SUCCESS) {
-        std::cout << "Found " << n_ext << " vulkan extensions" << std::endl;
-    }
-    else {
-        std::cout << "Failed to enumerate vulkan extensions" << std::endl;
-    }
 }
 
 
-void application::shutdown_sdl()
+VkInstance application::create_vulkan_instance() const
 {
-    SDL_DestroyRenderer(_renderer);
-    SDL_DestroyWindow(_window);
+    auto&& extensions = get_vulkan_instance_extensions();
+    
+    VkInstanceCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    create_info.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
+    create_info.ppEnabledExtensionNames = extensions.data();
+    
+    VkInstance instance = {};
+    VkResult result = vkCreateInstance(&create_info, nullptr, &instance);
 
-    SDL_Quit();  
+    if (result != VK_SUCCESS) {
+        SDL_Log("Failed to create Vulkan instance");
+        throw std::runtime_error("vkCreateInstance() call failed");
+    }
+
+    BOOST_LOG_TRIVIAL(trace) << "Vulkan instance has been successfully created";
+
+    return instance;
+}
+
+
+std::vector<const char*> application::get_vulkan_instance_extensions() const
+{
+    unsigned int count = 0;
+    if (!SDL_Vulkan_GetInstanceExtensions(_window, &count, nullptr)) {
+        SDL_Log("Failed to get Vulkan instance extension count using SDL");
+        throw std::runtime_error("SDL_Vulkan_GetInstanceExtensions() call failed");
+    }
+
+    std::vector<const char*> extensions(count);
+    if (!SDL_Vulkan_GetInstanceExtensions(_window, &count, extensions.data())) {
+        SDL_Log("Failed to get Vulkan instance extensions using SDL");
+        throw std::runtime_error("SDL_Vulkan_GetInstanceExtensions() call failed");
+    }
+
+    BOOST_LOG_TRIVIAL(debug) << "Loaded " << count << " Vulkan extensions: "
+                             << boost::algorithm::join(
+                                     std::vector<std::string>(
+                                             extensions.begin(),
+                                             extensions.end()),
+                                     ", ");
+    
+    return extensions;
 }
 
 
