@@ -81,7 +81,7 @@ void application::init_vulkan()
 
 VkInstance application::create_vulkan_instance() const
 {
-    auto&& extensions = get_vulkan_instance_extensions();
+    auto&& extensions = get_required_vk_instance_extensions();
     
     VkInstanceCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -90,9 +90,8 @@ VkInstance application::create_vulkan_instance() const
     
     VkInstance instance = {};
     VkResult result = vkCreateInstance(&create_info, nullptr, &instance);
-
     if (result != VK_SUCCESS) {
-        SDL_Log("Failed to create Vulkan instance");
+        BOOST_LOG_TRIVIAL(error) << "Failed to create Vulkan instance";
         throw std::runtime_error("vkCreateInstance() call failed");
     }
 
@@ -102,26 +101,25 @@ VkInstance application::create_vulkan_instance() const
 }
 
 
-std::vector<const char*> application::get_vulkan_instance_extensions() const
+std::vector<const char*> application::get_required_vk_instance_extensions() const
 {
     unsigned int count = 0;
     if (!SDL_Vulkan_GetInstanceExtensions(_window, &count, nullptr)) {
-        SDL_Log("Failed to get Vulkan instance extension count using SDL");
+        BOOST_LOG_TRIVIAL(error) << "Failed to get Vulkan instance extensions required for SDL";
         throw std::runtime_error("SDL_Vulkan_GetInstanceExtensions() call failed");
     }
 
     std::vector<const char*> extensions(count);
     if (!SDL_Vulkan_GetInstanceExtensions(_window, &count, extensions.data())) {
-        SDL_Log("Failed to get Vulkan instance extensions using SDL");
+        BOOST_LOG_TRIVIAL(error) << "Failed to get Vulkan instance extension required for SDL";
         throw std::runtime_error("SDL_Vulkan_GetInstanceExtensions() call failed");
     }
 
-    BOOST_LOG_TRIVIAL(debug) << "Loaded " << count << " Vulkan extensions: "
-                             << boost::algorithm::join(
-                                     std::vector<std::string>(
-                                             extensions.begin(),
-                                             extensions.end()),
-                                     ", ");
+    BOOST_LOG_TRIVIAL(debug)
+            << "Vulkan extensions required by SDL: "
+            << boost::algorithm::join(
+                    std::vector<std::string>(extensions.begin(), extensions.end()),
+                    ", ");
     
     return extensions;
 }

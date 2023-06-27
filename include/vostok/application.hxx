@@ -21,7 +21,7 @@ private:
     void init_vulkan();
 
     VkInstance create_vulkan_instance() const;
-    std::vector<const char*> get_vulkan_instance_extensions() const;
+    std::vector<const char*> get_required_vk_instance_extensions() const;
     
     SDL_Window* _window {nullptr};
     VkInstance _vk_instance;
